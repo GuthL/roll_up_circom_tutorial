@@ -48,6 +48,7 @@ circom eddsa_mimc_verifier.circom -o eddsa_mimc_verifier.cir
 ```
 
 From circomlib, you can use eddsa.js to generate an input. Copy the following snippet Copy into a file named input.json.
+
 ```
 const eddsa = require("./src/eddsa.js");
 const snarkjs = require("snarkjs");
@@ -80,8 +81,6 @@ Then test your circuit by running the following command:
 ```
 snarkjs calculatewitness -c eddsa_mimc_verifier.cir
 ```
-
-
 
 ## Permissioned markle tree update
 
