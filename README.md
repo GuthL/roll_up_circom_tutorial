@@ -65,13 +65,13 @@ const pubKey = eddsa.prv2pub(prvKey);
 const signature = eddsa.signMiMC(prvKey, msg);
 
 const inputs = {
-            enabled: 1,
-            Ax: pubKey[0].toString(),
-            Ay: pubKey[1].toString(),
-            R8x: signature.R8[0].toString(),
-            R8y: signature.R8[1].toString(),
-            S: signature.S.toString(),
-            M: msg.toString()}
+	enabled: 1,
+	Ax: pubKey[0].toString(),
+	Ay: pubKey[1].toString(),
+	R8x: signature.R8[0].toString(),
+	R8y: signature.R8[1].toString(),
+	S: signature.S.toString(),
+	M: msg.toString()}
 
 fs.writeFileSync('./input.json', JSON.stringify(inputs) , 'utf-8');
 ```
@@ -195,14 +195,14 @@ console.log(old_merkle[DEPTH-2]);
 const signature = eddsa.signMiMC(prvKey, old_hash);
 
 const inputs = {
-			current_state: old_merkle[DEPTH-2].toString(),
-			paths_to_root: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            pubkey_x: pubKey[0].toString(),
-            pubkey_y: pubKey[1].toString(),
-            R8x: signature.R8[0].toString(),
-            R8y: signature.R8[1].toString(),
-            S: signature.S.toString(),
-        	nonce: 0}
+	current_state: old_merkle[DEPTH-2].toString(),
+	paths_to_root: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    pubkey_x: pubKey[0].toString(),
+    pubkey_y: pubKey[1].toString(),
+    R8x: signature.R8[0].toString(),
+    R8y: signature.R8[1].toString(),
+    S: signature.S.toString(),
+	nonce: 0}
 
  console.log(inputs)
 
@@ -426,27 +426,26 @@ console.log("Updated Root")
 console.log(new_merkle[DEPTH-2]);
 
 const inputs = {
-			paths2old_root_from: [old_hash_leaf_to.toString(), 0, 0, 0, 0],
-			paths2old_root_to: [old_hash_leaf_from.toString(), 0, 0, 0, 0],
-			paths2new_root_from: [new_hash_leaf_to.toString(), 0, 0, 0, 0],
-			paths2new_root_to: [new_hash_leaf_from.toString(), 0, 0, 0, 0],
-			paths2root_from_pos: [0, 0, 0, 0, 0],
-			paths2root_to_pos: [1, 0, 0, 0, 0],
-			
-			current_state: old_merkle[DEPTH-2].toString(),
-            pubkey_x: pubKey_from[0].toString(),
-            pubkey_y: pubKey_from[1].toString(),
-            R8x: signature.R8[0].toString(),
-            R8y: signature.R8[1].toString(),
-            S: signature.S.toString(),
-        	nonce_from: nonce_from.toString(),
-        	to: pubKey_to[0].toString(),
-        	nonce_to: nonce_to.toString(),
-        	amount: amount.toString(),
-        	token_balance_from:token_balance_from.toString(),
-        	token_balance_to: token_balance_to.toString(),
-        	token_type_from:token_type_from.toString(),
-        	token_type_to:token_type_to.toString()
+	paths2old_root_from: [old_hash_leaf_to.toString(), 0, 0, 0, 0],
+	paths2old_root_to: [old_hash_leaf_from.toString(), 0, 0, 0, 0],
+	paths2new_root_from: [new_hash_leaf_to.toString(), 0, 0, 0, 0],
+	paths2new_root_to: [new_hash_leaf_from.toString(), 0, 0, 0, 0],
+	paths2root_from_pos: [0, 0, 0, 0, 0],
+	paths2root_to_pos: [1, 0, 0, 0, 0],
+	current_state: old_merkle[DEPTH-2].toString(),
+	pubkey_x: pubKey_from[0].toString(),
+	pubkey_y: pubKey_from[1].toString(),
+	R8x: signature.R8[0].toString(),
+	R8y: signature.R8[1].toString(),
+	S: signature.S.toString(),
+	nonce_from: nonce_from.toString(),
+	to: pubKey_to[0].toString(),
+	nonce_to: nonce_to.toString(),
+	amount: amount.toString(),
+token_balance_from:token_balance_from.toString(),
+	token_balance_to: token_balance_to.toString(),
+	token_type_from:token_type_from.toString(),
+	token_type_to:token_type_to.toString()
         }
 
 fs.writeFileSync('./input.json', JSON.stringify(inputs) , 'utf-8');
