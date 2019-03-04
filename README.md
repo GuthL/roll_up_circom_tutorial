@@ -25,6 +25,15 @@ A snark takes the previous merkel root as an input performs some state transitio
 
 Inside our snark we define the rules of our state transition. It defines what state transitions are legal and illegal. 
 
+## Pre-requirements
+```
+Install Circom
+Install Snarkjs
+Git clone Circomlib
+
+Move the scripts to the root of Circomlib project
+```
+
 ## Signature validation
 
 We put a public key in our merkle tree and proof we have a signature that was created by that public key for a message of size 80 bits. Save the following snippet under eddsa_mimc_verifier.circom
