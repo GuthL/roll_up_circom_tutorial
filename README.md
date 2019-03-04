@@ -1,4 +1,4 @@
-# roll_up tutorial
+# Roll_up tutorial, a layer 1 SNARK-based scalability solution for Ethereum
 
 ## Introduction
 
