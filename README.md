@@ -1,10 +1,10 @@
-# Roll_up tutorial, a layer 1 SNARK-based scalability solution for Ethereum
+# Roll\_up tutorial, a layer 1 SNARK-based scalability solution for Ethereum
 
 ## Introduction
 
-roll_up is a name for the pattern of performing merkle tree updates, signature validations inside a succinct proof system. This allows us to make dapps with thorughput of between 100tps and 37000 tps on ethereum today. 
+roll\_up is a name for the pattern of performing merkle tree updates, signature validations inside a succinct proof system. This allows us to make dapps with thorughput of between 100tps and 37000 tps on ethereum today. 
 
-This has a transformative scaleing implications. We can do 500 tps* and still maintain data availability guarrenetees of ethereum. We end up including with our snark a diff between state t and state t+1 as well as a proof that the transition from t to t+1 is correct.
+This has a transformative scaleing implications. We can do 500 tps\* and still maintain data availability guarrenetees of ethereum. We end up including with our snark a diff between state t and state t+1 as well as a proof that the transition from t to t+1 is correct.
 
 In a bunch of contexts we don't need to have all this data available. For example we could build a non-custodial exchange where the exchange operator is able to deprive me of access to my funds. This is a strick improvement over centralized exchanges. There are a bunch of less critical applications that can enter this modle and simply do a redeployment if this attack happens. For example crypto kities, on chain twitter would be good candidates for this kind of approch.
 
@@ -13,7 +13,7 @@ If we remove the need to have data availability on chain we will be able to reac
 The tools to build with snarks are improving to the point where you can make a mixer in a 3 day hackathon. You can also make roll_up style dapps. 
 Here we introduce you to the tools that circom provides. It gives a nice dev experince but still needs some work on the proving time optimizations. But it should be enough to play around with and if you want to go to prod at the hackathon we include some ideas about doing this in the disclaimer section. 
 
-* Note we ignore the cost of createing the snark proof and assume the operator is able to bear these costs. Which is less 100 USD per proof and is sub cent per transaction. This cost only needs to be paid by a single participant. 
+\* Note we ignore the cost of createing the snark proof and assume the operator is able to bear these costs. Which is less 100 USD per proof and is sub cent per transaction. This cost only needs to be paid by a single participant. 
 
 ## Operator paradym
 
@@ -87,7 +87,7 @@ snarkjs calculatewitness -c eddsa_mimc_verifier.cir
 So now lets say we want to update the leaf in the merkle tree 
 but the only let people update the leaf is if they have the current public key. 
 
-*Wait this is an NFT :D where the index in the tree is the token owner.*
+*Wait this is an NFT :D where the index in the tree is the token owned.*
 
 Save the following snippet under leaf_update.circom
 
