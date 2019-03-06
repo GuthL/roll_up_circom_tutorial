@@ -2,26 +2,29 @@
 
 ## Introduction
 
-roll\_up is a name for the pattern of performing merkle tree updates, signature validations inside a succinct proof system. This allows us to make dapps with thorughput of between 100tps and 37000 tps on ethereum today. 
+roll\_up is a name for the pattern of performing merkle tree updates, signature validations inside a succinct proof system. This allows us to make dapps with throughput of between 100tps and 37000 tps on ethereum today. 
 
-This has a transformative scaleing implications. We can do 500 tps\* and still maintain data availability guarrenetees of ethereum. We end up including with our snark a diff between state t and state t+1 as well as a proof that the transition from t to t+1 is correct.
+This has a transformative scaling implications. We can do 500 tps\* and still maintain data availability guarantees of Ethereum. We end up including with our snark a diff between state t and state t+1 as well as a proof that the transition from t to t+1 is correct.
 
-In a bunch of contexts we don't need to have all this data available. For example we could build a non-custodial exchange where the exchange operator is able to deprive me of access to my funds. This is a strick improvement over centralized exchanges. There are a bunch of less critical applications that can enter this modle and simply do a redeployment if this attack happens. For example crypto kities, on chain twitter would be good candidates for this kind of approch.
+![](https://i.imgur.com/E5oDG1a.png)
 
-If we remove the need to have data availability on chain we will be able to reach 8000 tps. If we weaken our assumitions further and stake the operator and slash them if they ever publish a proof that is invalid we can reduce the gas costs from 500k gas to the gas cost of putting a snark proof in storage. 288 bytes of storage space. 640k gas per kilo byte. So that means we can approach 34000 tps if we don't validate snarks or put data on chain. We only need to validate them if they are incorrect and then we can slash the operator. 
+### Data availability options
+In a bunch of contexts we don't need to have all this data available. For example, we could build a non-custodial exchange where the exchange operator is able to deprive me of access to my funds, which would still be a strict improvement over centralized exchanges. There are a bunch of less critical applications that can enter this model and simply do a redeployment if this attack happens. For example crypto kitties, on-chain twitter would be good candidates for this kind of approach.
+
+If we remove the need to have data availability on chain, we will be able to reach 8000 tps. If we weaken our assumptions further and stake the operator and slash them if they ever publish a proof that is invalid, we can reduce the gas costs from 500k gas to the gas cost of putting a snark proof in storage. 288 bytes of storage space. 640k gas per kilo byte. So that means we can approach 34000 tps if we don't validate snarks or put data on chain. We only need to validate them if they are incorrect and then we can slash the operator. 
 
 The tools to build with snarks are improving to the point where you can make a mixer in a 3 day hackathon. You can also make roll_up style dapps. 
-Here we introduce you to the tools that circom provides. It gives a nice dev experince but still needs some work on the proving time optimizations. But it should be enough to play around with and if you want to go to prod at the hackathon we include some ideas about doing this in the disclaimer section. 
+Here we introduce you to the tools that circom provides. It gives a nice dev experience but still needs some work on the proving time optimizations. But it should be enough to play around with and if you want to go to prod at the hackathon we include some ideas about doing this in the disclaimer section. 
 
-\* Note we ignore the cost of createing the snark proof and assume the operator is able to bear these costs. Which is less 100 USD per proof and is sub cent per transaction. This cost only needs to be paid by a single participant. 
+\* Note we ignore the cost of creating the snark proof and assume the operator is able to bear these costs. Which is less 100 USD per proof and is sub cent per transaction. This cost only needs to be paid by a single participant. 
 
-## Operator paradym
+## Operator paradigm
 
-We have a new paradym where users create signatures and an operator create snarks that aggragate these signatures together and perform state transitions based upon the rules defined in the snark.
+We have a new paradigm where users create signatures and an operator create snarks that aggregate these signatures together and perform state transitions based upon the rules defined in the snark.
 
 The state of the system is defined by a merkle root.
 
-A snark takes the previous merkel root as an input performs some state transition defined by the snark and produces a new merkle root as the output. Our smart contract tracks this merkle root. 
+A snark takes the previous merkle root as an input performs some state transition defined by the snark and produces a new merkle root as the output. Our smart contract tracks this merkle root. 
 
 Inside our snark we define the rules of our state transition. It defines what state transitions are legal and illegal. 
 
@@ -30,16 +33,17 @@ Inside our snark we define the rules of our state transition. It defines what st
 Check out this circom intro https://github.com/iden3/circom/blob/master/TUTORIAL.md
 
 ```
-Install Circom
-Install Snarkjs
-Git clone Circomlib
+npm install -g circom
+npm install -g snarkjs
+git clone https://github.com/iden3/circomlib
+git clone https://github.com/GuthL/roll_up_circom_tutorial
 
-Move the scripts to the root of Circomlib project
 ```
+Move the scripts from this repository (roll_up_circom_tutorial/accumulator_transfer, roll_up_circom_tutorial/leaf_update, roll_up_circom_tutorial/signature_verification, roll_up_circom_tutorial/tokens_transfer) to the root of circomlib project.
 
 ## Signature validation
 
-We put a public key in our merkle tree and proof we have a signature that was created by that public key for a message of size 80 bits. Save the following snippet under eddsa_mimc_verifier.circom
+We put a public key in our merkle tree and prove we have a signature that was created by that public key for a message of size 80 bits. In the root of the circomlib project, save the following snippet under eddsa_mimc_verifier.circom
 ```
 include "./circuits/eddsamimc.circom";
 
@@ -50,7 +54,7 @@ To generate the circuit usable by snarkjs, run:
 circom eddsa_mimc_verifier.circom -o eddsa_mimc_verifier.cir
 ```
 
-From circomlib, you can use eddsa.js to generate an input. Copy the following snippet Copy into a file named input.json.
+From circomlib, you can use eddsa.js to generate an input. Copy the following snippet into a file named input.js. Then, run `node input.js` to generate the input.json which snarkjs recognises.
 
 ```
 const eddsa = require("./src/eddsa.js");
@@ -85,12 +89,10 @@ Then test your circuit by running the following command:
 snarkjs calculatewitness -c eddsa_mimc_verifier.cir
 ```
 
-## Permissioned markle tree update
+## Permissioned merkle tree update
 
 So now lets say we want to update the leaf in the merkle tree 
-but the only let people update the leaf is if they have the current public key. 
-
-*Wait this is an NFT :D where the index in the tree is the token owned.*
+but the only let people update the leaf is if they have the current public key. The leaf index in the tree represents an NFT token owned a user.
 
 Save the following snippet under leaf_update.circom
 
@@ -165,7 +167,7 @@ To generate the circuit usable by snarkjs, run:
 ```
 circom leaf_update.circom -o leaf_update.cir
 ```
-Copy the following snippet and generate an example into a file named input.json.
+Once again, copy the following snippet and generate an example into a file named input.json.
 
 ```
 const eddsa = require("./src/eddsa.js");
@@ -508,6 +510,6 @@ anything you can store in the EVM you can store here.
 
 ## Disclaimer
 
-1. Circom is not really fast enough to nativley create proofs and trusted setups for merkle trees deeper than 12 hashes. or 2 trnasactions per block so we increase things
+1. Circom is not really fast enough to natively create proofs and trusted setups for merkle trees deeper than 12 hashes. or 2 trnasactions per block so we increase things
 2. This does not undermine the central claim here that we can do 500 tps on ethereum for a large subset of dapp logics. The reason being that we can use circom as a user frindly developer enviroment and pass all the proving and setup requiremntes to bellman which is much faster. 
 3. Even then bellman takes ~15 mintues to create a proof of AWS 40 core server. We can produce proofs in parallel that costs about 100 usd per proof. This is still sub sent per transaction which is really cheap compared to eth. 
