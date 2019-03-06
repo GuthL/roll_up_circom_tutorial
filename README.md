@@ -469,7 +469,7 @@ Perform the trusted setup *this will take a long time ~ 20 mins* see the comment
 They apply here also. 
 
 ```
-snarkjs setup
+snarkjs setup --protocol groth
 ```
 
 Create a smart contract to verify this circuit.
