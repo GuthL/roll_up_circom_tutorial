@@ -26,6 +26,9 @@ A snark takes the previous merkel root as an input performs some state transitio
 Inside our snark we define the rules of our state transition. It defines what state transitions are legal and illegal. 
 
 ## Pre-requirements
+
+Check out this circom intro https://github.com/iden3/circom/blob/master/TUTORIAL.md
+
 ```
 Install Circom
 Install Snarkjs
@@ -454,6 +457,30 @@ Careful, this circuit is quite big and took to setup on my MacbookPro more than 
 The witness is generally a better way to check if your circuit compiles properly.
 
 And we need to add some token balance requirements as follows
+
+## Putting this all inside a smart contract 
+
+Compile the code
+```
+circom tokens_transfer.circom -o circuit.json
+```
+
+Perform the trusted setup *this will take a long time.* see the comments about proving time in the disclaimer. 
+They apply here also. 
+
+```
+snarkjs setup
+```
+
+Create a smart contract to verify this circuit.
+
+```
+snarkjs generateverifier
+```
+
+
+
+
 
 ## Deposits 
 
