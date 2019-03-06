@@ -458,14 +458,14 @@ The witness is generally a better way to check if your circuit compiles properly
 
 And we need to add some token balance requirements as follows
 
-## Putting this all inside a smart contract 
+### Putting this all inside a smart contract 
 
 Compile the code
 ```
 circom tokens_transfer.circom -o circuit.json
 ```
 
-Perform the trusted setup *this will take a long time.* see the comments about proving time in the disclaimer. 
+Perform the trusted setup *this will take a long time ~ 20 mins* see the comments about reducing proving time in the disclaimer. 
 They apply here also. 
 
 ```
@@ -477,10 +477,6 @@ Create a smart contract to verify this circuit.
 ```
 snarkjs generateverifier
 ```
-
-
-
-
 
 ## Deposits 
 
