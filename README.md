@@ -39,7 +39,7 @@ git clone https://github.com/iden3/circomlib
 git clone https://github.com/GuthL/roll_up_circom_tutorial
 
 ```
-Move the scripts from this repository (roll_up_circom_tutorial/accumulator_transfer, roll_up_circom_tutorial/leaf_update, roll_up_circom_tutorial/signature_verification, roll_up_circom_tutorial/tokens_transfer) to the root of circomlib project.
+Move the scripts from this repository (roll_up_circom_tutorial/leaf_update, roll_up_circom_tutorial/signature_verification, roll_up_circom_tutorial/tokens_transfer) to the root of circomlib project.
 
 ## Signature validation
 
