@@ -628,17 +628,406 @@ So now we add a few things to our smart contract to allow for deposits
 ```
 
 This should allow us to do deposits onto our side chain. Please be careful using this beacuse i did not have time to test it. 
-But it should give you an example of how the deposit works. 
+But it should give you an example of how the deposit works.
 
-### Withdraws 
+Another way is to use another SNARK
+```
+include "../circomlib/circuits/mimc.circom";
+include "../circomlib/circuits/eddsamimc.circom";
+include "../circomlib/circuits/bitify.circom";
 
-If we have time
+template Main(n) {
+    signal input current_state;
 
+    signal input last_index;
+    
+    signal input pubkey[2];
+    signal input deposit;
+    signal input token_type;
+
+    signal private input paths2root[n-1];
+
+    // Needed to avoid a DDoS
+    // signal private input R8x;
+    // signal private input R8y;
+    // signal private input S;
+
+    signal output new_state;
+    signal output new_index;
+
+    var i
+    var j;
+    
+    last_index < 2**n;
+
+    // computes account 
+    component old_hash;
+    component new_hash;
+
+    component n2b;
+    component old_merkle[n-1];
+    component new_merkle[n-1];
+    component verifier;
+    
+    var tmp_state = current_state;
+    var tmp_index = last_index;
+    //get path to root
+    n2b = Num2Bits(n-1);
+    tmp_index = tmp_index+i;
+    n2b.in <== tmp_index;
+
+    old_hash = MultiMiMC7(1,91);
+    old_hash.in[0] <== 0;
+
+    old_merkle[0] = MultiMiMC7(2,91);
+    old_merkle[0].in[0] <== old_hash.out - n2b.out[0]* (old_hash.out - paths2root[0]);
+    old_merkle[0].in[1] <== paths2root[0] - n2b.out[0]* (paths2root[0] - old_hash.out);
+
+    for (j=1; j<n-1; j++){
+        old_merkle[j] = MultiMiMC7(2,91);
+        old_merkle[j].in[0] <== old_merkle[j-1].out - n2b.out[j]* (old_merkle[j-1].out - paths2root[j]);
+        old_merkle[j].in[1] <== paths2root[j] - n2b.out[j]* (paths2root[j] - old_merkle[j-1].out);
+        }
+
+    tmp_state === old_merkle[n-2].out;
+
+    // Needed to avoid a DDoS
+    // verifier = EdDSAMiMCVerifier();   
+    // verifier.enabled <== 1;
+    // verifier.Ax <== pubkey[0];
+    // verifier.Ay <== pubkey[1];
+    // verifier.R8x <== R8x;
+    // verifier.R8y <== R8y;
+    // verifier.S <== S;
+    // verifier.M <== pubkey[0];
+
+    new_hash = MultiMiMC7(4,91);
+    new_hash.in[0] <== pubkey[0];
+    new_hash.in[1] <== deposit;
+    new_hash.in[2] <== 0;
+    new_hash.in[3] <== token_type;
+
+    new_merkle[0] = MultiMiMC7(2,91);
+    new_merkle[0].in[0] <== new_hash.out - n2b.out[0]* (new_hash.out - paths2root[0]);
+    new_merkle[0].in[1] <== paths2root[0] - n2b.out[0]* (paths2root[0] - new_hash.out);
+
+    for (j=1; j<n-1; j++){
+        new_merkle[j] = MultiMiMC7(2,91);
+        new_merkle[j].in[0] <== new_merkle[j-1].out - n2b.out[j]* (new_merkle[j-1].out - paths2root[j]);
+        new_merkle[j].in[1] <== paths2root[j] - n2b.out[j]* (paths2root[j] - new_merkle[j-1].out);
+        }
+    tmp_state = new_merkle[n-2].out
+
+    new_state <== new_merkle[n-2].out;
+    new_index <== last_index+k;
+
+    }
+
+component main = Main(6);
+```
+ 
+
+### Withdraws
+
+```
+include "../circomlib/circuits/mimc.circom";
+include "../circomlib/circuits/eddsamimc.circom";
+include "../circomlib/circuits/bitify.circom";
+
+template Main(n,k) {
+    signal input current_state;
+    
+    signal private input pubkey[k][2];
+    signal private input nonce[k];
+    signal private input token_balance[k];
+
+    signal input withdraw[k];
+    signal input token_type[k];
+    signal input withdraw_account[k];
+
+    signal private input paths2root[k][n-1];
+    signal private input paths2root_pos[k][n-1];
+
+    signal private input R8x[k];
+    signal private input R8y[k];
+    signal private input S[k];
+
+    signal output new_state;
+
+    var i;
+    var j;
+
+    var NONCE_MAX_VALUE = 100;
+
+    // computes account 
+    component old_hash[k];
+    component new_hash[k];
+    component old_merkle[k][n-1];
+    component new_merkle[k][n-1];
+    component transaction[k];
+    component verifier[k];
+    var tmp_state = current_state;
+
+    //get path to root
+    for (i=0;i<k;i++){
+
+        old_hash[i] = MultiMiMC7(4,91);
+        old_hash[i].in[0] <== pubkey[i][0];
+        old_hash[i].in[1] <== token_balance[i];
+        old_hash[i].in[2] <== nonce[i];
+        old_hash[i].in[3] <== token_type[i];
+
+        old_merkle[i][0] = MultiMiMC7(2,91);
+        old_merkle[i][0].in[0] <== old_hash[i].out - paths2root_pos[i][0] * (old_hash[i].out - paths2root[i][0]);
+        old_merkle[i][0].in[1] <== paths2root[i][0] - paths2root_pos[i][0] * (paths2root[i][0] - old_hash[i].out);
+
+        for (j=1; j<n-1; j++){
+            old_merkle[i][j] = MultiMiMC7(2,91);
+            old_merkle[i][j].in[0] <== old_merkle[i][j-1].out - paths2root_pos[i][j] * (old_merkle[i][j-1].out - paths2root[i][j]);
+            old_merkle[i][j].in[1] <== paths2root[i][j] - paths2root_pos[i][j] * (paths2root[i][j] - old_merkle[i][j-1].out);
+            }
+
+        tmp_state === old_merkle[i][n-2].out;
+
+        transaction[i] = MultiMiMC7(2,91);
+        transaction[i].in[0] <== old_hash[i].out;
+        transaction[i].in[1] <== withdraw_account[i];
+
+        verifier[i] = EdDSAMiMCVerifier();   
+        verifier[i].enabled <== 1;
+        verifier[i].Ax <== pubkey[i][1];
+        verifier[i].Ay <== pubkey[i][0];
+        verifier[i].R8x <== R8x[i];
+        verifier[i].R8y <== R8y[i];
+        verifier[i].S <== S[i];
+        verifier[i].M <== transaction[i].out;
+
+        // balance checks
+        token_balance[i] - withdraw[i] <= token_balance[i];
+
+        nonce[i] != NONCE_MAX_VALUE;
+
+        new_hash[i] = MultiMiMC7(4,91);
+        new_hash[i].in[0] <== pubkey[i][0];
+        new_hash[i].in[1] <== token_balance[i]-withdraw[i] ;
+        new_hash[i].in[2] <== nonce[i]+1;
+        new_hash[i].in[3] <== token_type[i];
+
+        new_merkle[i][0] = MultiMiMC7(2,91);
+        new_merkle[i][0].in[0] <== new_hash[i].out - paths2root_pos[i][0] * (new_hash[i].out - paths2root[i][0]);
+        new_merkle[i][0].in[1] <== paths2root[i][0] - paths2root_pos[i][0] * (paths2root[i][0] - new_hash[i].out);
+
+        for (j=1; j<n-1; j++){
+            new_merkle[i][j] = MultiMiMC7(2,91);
+            new_merkle[i][j].in[0] <== new_merkle[i][j-1].out - paths2root_pos[i][j] * (new_merkle[i][j-1].out - paths2root[i][j]);
+            new_merkle[i][j].in[1] <== paths2root[i][j] - paths2root_pos[i][j] * (paths2root[i][j] - new_merkle[i][j-1].out);
+            }
+        tmp_state = new_merkle[i][n-2].out
+        }
+    
+    new_state <== new_merkle[k-1][n-2].out;
+    }
+
+component main = Main(6,2);
+```
 ## Prover race conditions
 
 The prover takes x seconds to create a proof. Therefore we need the merkle root to be the same at the end of the proof as at the start. 
 
-So we need to stagger the depsoits and withdraws that change the token balances. 
+So we need to stagger the depsoits and withdraws that change the token balances.
+
+## Prover logic
+
+```
+const eddsa = require("./snarks/circomlib/src/eddsa.js");
+const snarkjs = require("snarkjs");
+const MIMC = require('./snarks/circomlib/src/mimc7.js')
+const assert = require('assert');
+const fs = require('fs');
+
+const NONCE_MAX_VALUE = 100;
+
+function merkleTree(leafs, elements_to_proof){
+ var i;
+ var j;
+ var h;
+ const hash_leafs = leafs.map(x => MIMC.multiHash([x]));
+ const hash_leafs_l = [[],[],[],[],[],[],[]];
+ var tmp_elements_to_proof = elements_to_proof;
+ const proofs = [[],[]];
+
+ const tmp1 = elements_to_proof[0].toString(2).padStart(6,'0').split('').reverse();
+ const tmp2 = elements_to_proof[1].toString(2).padStart(6,'0').split('').reverse();
+ const paths = [tmp1.map(x => parseInt(x,10)),
+     tmp2.map(x => parseInt(x,10))];
+
+ //console.log(hash_leafs);
+ hash_leafs_l[0] = hash_leafs;
+
+ for (h = 1; h<6;h++){
+  for (i = 0; i<parseInt(64/2**(h));i++){
+   for (j = 0; j<2;j++){
+    if (tmp_elements_to_proof[j] == 2*i){
+     proofs[j].push(hash_leafs_l[h-1][2*i+1]);
+    } else if (tmp_elements_to_proof[j] == 2*i+1){
+     proofs[j].push(hash_leafs_l[h-1][2*i]);
+    }
+   }
+   //console.log(h, i);
+  hash_leafs_l[h].push(MIMC.multiHash([hash_leafs_l[h-1][2*i],hash_leafs_l[h-1][2*i+1]]))
+  }
+  tmp_elements_to_proof = tmp_elements_to_proof.map(x => Math.floor(x/2))
+ }
+
+ return [MIMC.multiHash([hash_leafs_l[5][0],hash_leafs_l[5][1]]), proofs, paths];
+}
+
+function merkleTree1(leafs, elements_to_proof){
+ var i;
+ var j;
+ var h;
+ const hash_leafs = leafs.map(x => MIMC.multiHash([x]));
+ const hash_leafs_l = [[],[],[],[],[],[],[]];
+ var tmp_elements_to_proof = elements_to_proof;
+ const proofs = [[],[]];
+
+ const tmp1 = elements_to_proof[0].toString(2).padStart(6,'0').split('').reverse();
+ const paths = [tmp1.map(x => parseInt(x,10))];
+
+ //console.log(hash_leafs);
+ hash_leafs_l[0] = hash_leafs;
+
+ for (h = 1; h<7;h++){
+  for (i = 0; i<parseInt(64/2**(h));i++){
+   for (j = 0; j<1;j++){
+    if (tmp_elements_to_proof[j] == 2*i){
+     proofs[j].push(hash_leafs_l[h-1][2*i+1]);
+    } else if (tmp_elements_to_proof[j] == 2*i+1){
+     proofs[j].push(hash_leafs_l[h-1][2*i]);
+    }
+   }
+   //console.log(h, i);
+  hash_leafs_l[h].push(MIMC.multiHash([hash_leafs_l[h-1][2*i],hash_leafs_l[h-1][2*i+1]]))
+  }
+  tmp_elements_to_proof = tmp_elements_to_proof.map(x => Math.floor(x/2))
+ }
+
+ return [MIMC.multiHash([hash_leafs_l[5][0],hash_leafs_l[5][1]]), proofs, paths];
+}
+
+function verifyTransfer(batchTransactions, leafsSet){	
+	for (t in batchTransactions){
+
+		const old_account_from = MIMC.multiHash([t.pubkey[0],t.token_balance_from,t.nonce,t.token_type]);
+		assert(leafsSet.contains(old_account_from));
+
+		const old_account_to = MIMC.multiHash([t.to[0],t.token_balance_to,t.nonce_to,t.token_type_to]);
+		assert(leafsSet.contains(old_account_to));
+
+		const msg = MIMC.multiHash([old_account_from, old_account_to]);
+
+		assert(eddsa.verifyMiMC(t.pubKey, [t.R8x, t.R8y, t.S], msg));
+
+		assert(t.token_balance_from - t.amount <= t.token_balance_from);
+		assert(t.token_balance_to + t.amount >= t.token_balance_to);
+
+		assert(t.nonce_from < NONCE_MAX_VALUE);
+		assert(t.token_type_from == t.token_type_to);
+	}	
+}
+
+function verifyDeposit(batchTransactions, leafsSet){	
+	for (t in batchTransactions){
+	}	
+}
+
+function verifyWithdraw(batchTransactions, leafsSet){	
+	for (t in batchTransactions){
+
+		const old_account_from = MIMC.multiHash([t.pubkey[0],t.token_balance_from,t.nonce,t.token_type]);
+		assert(leafsSet.contains(old_account_from));
+
+		const msg = MIMC.multiHash([old_account_from, t.withdraw]);
+
+		assert(eddsa.verifyMiMC(t.pubKey, [t.R8x, t.R8y, t.S], msg));
+
+		assert(t.token_balance_from - t.amount <= t.token_balance_from);
+
+		assert(t.nonce_from < NONCE_MAX_VALUE);
+		assert(t.token_type_from == t.token_type_to);
+	}	
+}
+
+function generateWitnessDeposit(batchTransactions, leafsSet, current_state, current_index){
+	verifyDeposit(batchTransactions, leafsSet);
+	var index = current_index;
+	var state = current_state;
+
+	var pubkey = [];
+	var deposit = [];
+	var token_type = [];
+	var paths2root = [];
+	var i;
+
+	for (i=0; i<batchTransactions.length;i++){
+		let t = batchTransactions[i];
+		pubkey = t.pubkey;
+
+		deposit.push(t.deposit);
+		token_type.push(t.token_type);
+		let old_tree = merkleTree(leafsSet, [index,index]);
+		paths2root = old_tree[1][0];
+		let account = MIMC.multiHash([t.pubkey[0],t.deposit,0,t.token_type]);
+		leafsSet[index] = account;
+		let new_tree = merkleTree1(leafsSet, [index]);
+		index = index+1;
+		state = new_tree[0];
+		console.log(state);
+	}
+
+	console.log(paths2root);
+	const inputs = {
+	current_state: current_state.toString(10),
+	last_index: current_index.toString(10),
+	pubkey: pubkey.map(x => x.toString(10)),
+	deposit: deposit.map(x => x.toString(10)),
+	token_type: (1).toString(10),
+	paths2root: paths2root.map(x => x.toString(10)),
+	new_state: state.toString(10),
+	new_index: (current_index+batchTransactions.length).toString(10)
+    }
+
+	return inputs;
+}
+
+function generateWitnessTransfer(batchTransactions, leafsSet, current_state){
+	verifyTransfer(batchTransactions, leafsSet);
+	var index_proof = [];
+	var state = current_state;
+	for (t in batchTransactions){
+
+		let old_account_from = MIMC.multiHash([t.pubkey[0],t.token_balance_from,t.nonce,t.token_type]);
+		let old_account_to = MIMC.multiHash([t.to[0],t.token_balance_to,t.nonce_to,t.token_type_to]);
+
+		leafsSet[leafsSet.indexOf(old_account_from)] = MIMC.multiHash([t.pubkey[0],t.token_balance_from-amount,t.nonce+1,t.token_type])
+		leafsSet[leafsSet.indexOf(old_account_to)] = MIMC.multiHash([t.to[0],t.token_balance_to+amount,t.nonce_to+1,t.token_type])
+		let tree = merkleTree(leafsSet, [leafsSet.indexOf(old_account_from), leafsSet.indexOf(old_account_to)]);
+	}
+}
+
+function generateWitnessWithdraw(batchTransactions, leafsSet){
+	verifyWithdraw(batchTransactions, leafsSet);
+	var index_proof = [];
+	for (t in batchTransactions){
+
+		let old_account_from = MIMC.multiHash([t.pubkey[0],t.token_balance_from,t.nonce,t.token_type]);
+		var index = leafsSet.indexOf(old_account_from)
+		leafsSet[index] = MIMC.multiHash([t.pubkey[0],t.token_balance_from-amount,t.nonce+1,t.token_type])
+		index_proof.push(index)
+	}
+	const tree = merkleTree(leafsSet, index_proof);
+}
+```
 
 
 ## Homework :P
