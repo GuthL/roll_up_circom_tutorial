@@ -73,137 +73,25 @@ $ snarkjs calculatewitness -c eddsa_mimc_verifier.cir -i eddsa_mimc_input.json
 So now lets say we want to update the leaf in the merkle tree
 but the only let people update the leaf is if they have the current public key. The leaf index in the tree represents an NFT token owned a user.
 
-Save the following snippet under leaf_update.circom
+Circuit can be found at `leaf_update/leaf_update.circom`
 
-```
-include "./circuits/mimc.circom";
-include "./circuits/eddsamimc.circom";
-include "./circuits/bitify.circom";
+#### Compile circuit
 
-template Main(n) {
-    signal private input paths_to_root[n-1];
-
-    signal input current_state;
-    signal input pubkey_x;
-    signal input pubkey_y;
-    signal input R8x;
-    signal input R8y;
-    signal input S;
-    signal input nonce;
-
-    signal output out;
-
-    var i;
-
-    component old_hash = MultiMiMC7(3,91);
-    old_hash.in[0] <== pubkey_x;
-    old_hash.in[1] <== pubkey_y;
-    old_hash.in[2] <== nonce;
-
-    component old_merkle[n-1];
-    old_merkle[0] = MultiMiMC7(2,91);
-    old_merkle[0].in[0] <== old_hash.out;
-    old_merkle[0].in[1] <== paths_to_root[0];
-    for (i=1; i<n-1; i++){
-        old_merkle[i] = MultiMiMC7(2,91);
-        old_merkle[i].in[0] <== old_merkle[i-1].out;
-        old_merkle[i].in[1] <== paths_to_root[i-1];
-    }
-
-    current_state === old_merkle[n-2].out;
-
-    component verifier = EdDSAMiMCVerifier();
-    verifier.enabled <== 1;
-    verifier.Ax <== pubkey_x;
-    verifier.Ay <== pubkey_y;
-    verifier.R8x <== R8x
-    verifier.R8y <== R8y
-    verifier.S <== S;
-    verifier.M <== old_hash.out;
-
-    component new_hash = MultiMiMC7(3,91);
-    new_hash.in[0] <== pubkey_x;
-    new_hash.in[1] <== pubkey_y;
-    new_hash.in[2] <== nonce+1;
-
-    component new_merkle[n-1];
-    new_merkle[0] = MultiMiMC7(2,91);
-    new_merkle[0].in[0] <== new_hash.out;
-    new_merkle[0].in[1] <== paths_to_root[0];
-    for (i=1; i<n-1; i++){
-        new_merkle[i] = MultiMiMC7(2,91);
-        new_merkle[i].in[0] <== new_merkle[i-1].out;
-        new_merkle[i].in[1] <== paths_to_root[i-1];
-    }
-
-    out <== new_merkle[n-2].out;
-}
-
-component main = Main(24);
+```bash
+$ circom leaf_update/leaf_update.circom -o leaf_update/leaf_update.cir
 ```
 
-To generate the circuit usable by snarkjs, run:
+#### Generate Input
 
+Checkout `leaf_update/generate_sample_leaf_update.js`
+
+Run the command below to generate input for calculating witness.
+
+```bash
+$ node leaf_update/generate_sample_leaf_update.js
 ```
-circom leaf_update.circom -o leaf_update.cir
-```
 
-Once again, copy the following snippet and generate an example into a file named input.json.
-
-```
-const eddsa = require("./src/eddsa.js");
-const snarkjs = require("snarkjs");
-const fs = require('fs');
-const util = require('util');
-const mimcjs = require("./src/mimc7.js");
-
-const bigInt = snarkjs.bigInt;
-
-const DEPTH = 24;
-const msg = bigInt(9999);
-
-const prvKey = Buffer.from("0000000000000000000000000000000000000000000000000000000000000001", "hex");
-
-const pubKey = eddsa.prv2pub(prvKey);
-const nonce = 0;
-const old_hash = mimcjs.multiHash([pubKey[0],pubKey[1],nonce]);
-
-var old_merkle = new Array(DEPTH-1);
-old_merkle[0] = mimcjs.multiHash([old_hash,0]);
-var i;
-for (i = 1; i < DEPTH-1; i++) {
-  old_merkle[i] = mimcjs.multiHash([old_merkle[i-1],0]);
-}
-console.log("Old Root")
-console.log(old_merkle[DEPTH-2]);
-
-const signature = eddsa.signMiMC(prvKey, old_hash);
-
-const inputs = {
-	current_state: old_merkle[DEPTH-2].toString(),
-	paths_to_root: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    pubkey_x: pubKey[0].toString(),
-    pubkey_y: pubKey[1].toString(),
-    R8x: signature.R8[0].toString(),
-    R8y: signature.R8[1].toString(),
-    S: signature.S.toString(),
-	nonce: 0}
-
- console.log(inputs)
-
-fs.writeFileSync('./input.json', JSON.stringify(inputs) , 'utf-8');
-
-const new_hash = mimcjs.multiHash([pubKey[0],pubKey[1],nonce+1]);
-
-var new_merkle = new Array(DEPTH-1);
-new_merkle[0] = mimcjs.multiHash([new_hash,0]);
-var i;
-for (i = 1; i < DEPTH-1; i++) {
-  new_merkle[i] = mimcjs.multiHash([new_merkle[i-1],0]);
-}
-console.log("New Root")
-console.log(new_merkle[DEPTH-2]);
-```
+A file `leaf_update_input.json` could be created which is then supplied while generating witness.
 
 ## Token transfers
 
