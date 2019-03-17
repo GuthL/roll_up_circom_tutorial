@@ -41,24 +41,28 @@ $ docker run -ti vaibhavchellani/roll_up /bin/bash
 
 ## Signature validation
 
-We put a public key in our merkle tree and prove we have a signature that was created by that public key for a message of size 80 bits. In the root of the circomlib project, save the following snippet under eddsa_mimc_verifier.circom
+We put a public key in our merkle tree and prove we have a signature that was created by that public key for a message of size 80 bits.
+Circuit can be found at `signature_verification/eddsa_mimc_verifier.circom`
 
-Circuit can be found at `signature_verification/eddsa_mimc_verifier.circomr`
-
-To generate the circuit usable by snarkjs, run:
+#### Compile circuit
 
 ```bash
 $ circom signature_verification/eddsa_mimc_verifier.circom -o signature_verification/eddsa_mimc_verifier.cir
 ```
 
+#### Generate Input
+
 Checkout `signature_verification/generate_sample_eddsa_mimc_verifier.js`
 
-Run
+Run the command below to generate input for calculating witness.
 
-`node signature_verification/generate_sample_eddsa_mimc_verifier.js` to generate input for calculating witness.
+```bash
+$ node signature_verification/generate_sample_eddsa_mimc_verifier.js
+```
+
 A file `eddsa_mimc_input.json` would be created which is then supplied while generating witness.
 
-Then test your circuit by running the following command:
+#### Test if circuit compiles correctly
 
 ```bash
 $ snarkjs calculatewitness -c eddsa_mimc_verifier.cir -i eddsa_mimc_input.json
