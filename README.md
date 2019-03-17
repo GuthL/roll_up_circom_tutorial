@@ -84,7 +84,6 @@ $ circom leaf_update/leaf_update.circom -o leaf_update/leaf_update.cir
 #### Generate Input
 
 Checkout `leaf_update/generate_sample_leaf_update.js`
-
 Run the command below to generate input for calculating witness.
 
 ```bash
@@ -98,237 +97,26 @@ A file `leaf_update_input.json` could be created which is then supplied while ge
 Lets change our leaf so that instead of a public key it holds a public key and a number.
 We can use the number to represent a token balance.
 
-```
-include "./circuits/mimc.circom";
-include "./circuits/eddsamimc.circom";
-include "./circuits/bitify.circom";
+We have a circuit at `tokens_transfer/tokens_transfer.circom`
 
-template Main(n) {
-    signal input current_state;
+#### Compile circuit
 
-    signal private input paths2old_root_from[n-1];
-    signal private input paths2old_root_to[n-1];
-    signal private input paths2new_root_from[n-1];
-    signal private input paths2new_root_to[n-1];
-
-    signal private input paths2root_from_pos[n-1];
-    signal private input paths2root_to_pos[n-1];
-
-    signal private input pubkey_x;
-    signal private input pubkey_y;
-    signal private input R8x;
-    signal private input R8y;
-    signal private input S;
-
-    signal private input nonce_from;
-    signal private input to;
-    signal private input nonce_to;
-    signal private input amount;
-
-    signal private input token_balance_from;
-    signal private input token_balance_to;
-    signal private input token_type_from;
-    signal private input token_type_to;
-
-    signal output out;
-
-    var i;
-
-    var NONCE_MAX_VALUE = 100;
-
-    // accounts existence check
-    component old_hash_from = MultiMiMC7(4,91);
-    old_hash_from.in[0] <== pubkey_x;
-    old_hash_from.in[1] <== token_balance_from;
-    old_hash_from.in[2] <== nonce_from;
-    old_hash_from.in[3] <== token_type_from;
-
-    component old_merkle_from[n-1];
-    old_merkle_from[0] = MultiMiMC7(2,91);
-    old_merkle_from[0].in[0] <== old_hash_from.out - paths2root_from_pos[0]* (old_hash_from.out - paths2old_root_from[0]);
-    old_merkle_from[0].in[1] <== paths2old_root_from[0] - paths2root_from_pos[0]* (paths2old_root_from[0] - old_hash_from.out);
-
-    for (i=1; i<n-1; i++){
-    	old_merkle_from[i] = MultiMiMC7(2,91);
-    	old_merkle_from[i].in[0] <== old_merkle_from[i-1].out - paths2root_from_pos[i]* (old_merkle_from[i-1].out - paths2old_root_from[i]);
-    	old_merkle_from[i].in[1] <== paths2old_root_from[i] - paths2root_from_pos[i]* (paths2old_root_from[i] - old_merkle_from[i-1].out);
-    	}
-
-    current_state === old_merkle_from[n-2].out;
-
-    component old_hash_to = MultiMiMC7(4,91);
-    old_hash_to.in[0] <== to;
-    old_hash_to.in[1] <== token_balance_to;
-    old_hash_to.in[2] <== nonce_to;
-    old_hash_to.in[3] <== token_type_to;
-
-    component old_merkle_to[n-1];
-    old_merkle_to[0] = MultiMiMC7(2,91);
-    old_merkle_to[0].in[0] <== old_hash_to.out - paths2root_to_pos[0]* (old_hash_to.out - paths2old_root_to[0]);
-    old_merkle_to[0].in[1] <== paths2old_root_to[0] - paths2root_to_pos[0]* (paths2old_root_to[0] - old_hash_to.out);
-
-    for (i=1; i<n-1; i++){
-    	old_merkle_to[i] = MultiMiMC7(2,91);
-    	old_merkle_to[i].in[0] <== old_merkle_to[i-1].out - paths2root_to_pos[i]* (old_merkle_to[i-1].out - paths2old_root_to[i]);
-    	old_merkle_to[i].in[1] <== paths2old_root_to[i] - paths2root_to_pos[i]* (paths2old_root_to[i] - old_merkle_to[i-1].out);
-    	}
-
-    current_state === old_merkle_to[n-2].out;
-
-// authorization check
-    component verifier = EdDSAMiMCVerifier();
-    verifier.enabled <== 1;
-    verifier.Ax <== pubkey_x;
-    verifier.Ay <== pubkey_y;
-    verifier.R8x <== R8x
-    verifier.R8y <== R8y
-    verifier.S <== S;
-    verifier.M <== old_hash_from.out;
-
-    // balance checks
-    token_balance_from-amount <= token_balance_from;
-    token_balance_to + amount >= token_balance_to;
-
-    nonce_from != NONCE_MAX_VALUE;
-    token_type_from === token_type_to;
-
-    // accounts updates
-    component new_hash_from = MultiMiMC7(4,91);
-    new_hash_from.in[0] <== pubkey_x;
-    new_hash_from.in[1] <== token_balance_from-amount;
-    new_hash_from.in[2] <== nonce_from+1;
-    new_hash_from.in[3] <== token_type_from;
-
-	component new_merkle_from[n-1];
-    new_merkle_from[0] = MultiMiMC7(2,91);
-    new_merkle_from[0].in[0] <== new_hash_from.out - paths2root_from_pos[0]* (new_hash_from.out - paths2new_root_from[0]);
-    new_merkle_from[0].in[1] <== paths2new_root_from[0] - paths2root_from_pos[0]* (paths2new_root_from[0] - new_hash_from.out);
-
-    for (i=1; i<n-1; i++){
-    	new_merkle_from[i] = MultiMiMC7(2,91);
-    	new_merkle_from[i].in[0] <== new_merkle_from[i-1].out - paths2root_from_pos[i]* (new_merkle_from[i-1].out - paths2new_root_from[i]);
-    	new_merkle_from[i].in[1] <== paths2new_root_from[i] - paths2root_from_pos[i]* (paths2new_root_from[i] - new_merkle_from[i-1].out);
-    	}
-
-    component new_hash_to = MultiMiMC7(4,91);
-    new_hash_to.in[0] <== to;
-    new_hash_to.in[1] <== token_balance_to+amount;
-    new_hash_to.in[2] <== nonce_to;
-    new_hash_to.in[3] <== token_type_to;
-
-	component new_merkle_to[n-1];
-    new_merkle_to[0] = MultiMiMC7(2,91);
-    new_merkle_to[0].in[0] <== new_hash_to.out - paths2root_to_pos[0]* (new_hash_to.out - paths2new_root_to[0]);
-    new_merkle_to[0].in[1] <== paths2new_root_to[0] - paths2root_to_pos[0]* (paths2new_root_to[0] - new_hash_to.out);
-
-    for (i=1; i<n-1; i++){
-    	new_merkle_to[i] = MultiMiMC7(2,91);
-    	new_merkle_to[i].in[0] <== new_merkle_to[i-1].out - paths2root_to_pos[i]* (new_merkle_to[i-1].out - paths2new_root_to[i]);
-    	new_merkle_to[i].in[1] <== paths2new_root_to[i] - paths2root_to_pos[i]* (paths2new_root_to[i] - new_merkle_to[i-1].out);
-    	}
-
-   	new_merkle_from[n-2].out === new_merkle_to[n-2].out
-
-    out <== new_merkle_to[n-2].out;
-
-    }
-
-component main = Main(6);
-
+```bash
+$ circom tokens_transfer/tokens_transfer.circom -o tokens_transfer/tokens_transfer.cir
 ```
 
-To generate the circuit usable by snarkjs, run:
+#### Generate Input
 
-```
-circom tokens_transfer.circom -o tokens_transfer.cir
-```
+Checkout `token_transfers/generate_sample_tokens_transfer.js`
+Run the command below to generate input for calculating witness.
 
-Copy the following snippet and generate an example into a file named input.json.
-
-```
-const eddsa = require("./src/eddsa.js");
-const snarkjs = require("snarkjs");
-const fs = require('fs');
-const util = require('util');
-const mimcjs = require("./src/mimc7.js");
-
-const bigInt = snarkjs.bigInt;
-
-const DEPTH = 6;
-
-const prvKey_from = Buffer.from("0000000000000000000000000000000000000000000000000000000000000001", "hex");
-const prvKey_to = Buffer.from("0000000000000000000000000000000000000000000000000000000000000002", "hex");
-
-const pubKey_from = eddsa.prv2pub(prvKey_from);
-const pubKey_to = eddsa.prv2pub(prvKey_to);
-
-const nonce_from = 0;
-const nonce_to = 0;
-
-const token_type_from = 10;
-const token_balance_from = 1000;
-const token_type_to = 10;
-const token_balance_to = 2000;
-const amount = 100;
-
-const old_hash_leaf_from = mimcjs.multiHash([pubKey_from[0], token_balance_from, nonce_from, token_type_from]);
-const old_hash_leaf_to = mimcjs.multiHash([pubKey_to[0], token_balance_to, nonce_to, token_type_to]);
-
-console.log("We selected to place account 1 and 2 at index 0 and 1 of the Merkle Tree");
-var old_merkle = new Array(DEPTH-1);
-old_merkle[0] = mimcjs.multiHash([old_hash_leaf_from,old_hash_leaf_to]);
-
-var i;
-for (i = 1; i < DEPTH-1; i++) {
-  old_merkle[i] = mimcjs.multiHash([old_merkle[i-1],0]);
-}
-
-console.log("Initial Root")
-console.log(old_merkle[DEPTH-2]);
-
-const signature = eddsa.signMiMC(prvKey_from, old_hash_leaf_from);
-
-const new_hash_leaf_from = mimcjs.multiHash([pubKey_from[0], token_balance_from-amount, nonce_from+1, token_type_from]);
-const new_hash_leaf_to = mimcjs.multiHash([pubKey_to[0], token_balance_to+amount, nonce_to, token_type_to]);
-
-var new_merkle = new Array(DEPTH-1);
-new_merkle[0] = mimcjs.multiHash([new_hash_leaf_from,new_hash_leaf_to]);
-var i;
-for (i = 1; i < DEPTH-1; i++) {
-  new_merkle[i] = mimcjs.multiHash([new_merkle[i-1],0]);
-}
-
-console.log("Updated Root")
-console.log(new_merkle[DEPTH-2]);
-
-const inputs = {
-	paths2old_root_from: [old_hash_leaf_to.toString(), 0, 0, 0, 0],
-	paths2old_root_to: [old_hash_leaf_from.toString(), 0, 0, 0, 0],
-	paths2new_root_from: [new_hash_leaf_to.toString(), 0, 0, 0, 0],
-	paths2new_root_to: [new_hash_leaf_from.toString(), 0, 0, 0, 0],
-	paths2root_from_pos: [0, 0, 0, 0, 0],
-	paths2root_to_pos: [1, 0, 0, 0, 0],
-	current_state: old_merkle[DEPTH-2].toString(),
-	pubkey_x: pubKey_from[0].toString(),
-	pubkey_y: pubKey_from[1].toString(),
-	R8x: signature.R8[0].toString(),
-	R8y: signature.R8[1].toString(),
-	S: signature.S.toString(),
-	nonce_from: nonce_from.toString(),
-	to: pubKey_to[0].toString(),
-	nonce_to: nonce_to.toString(),
-	amount: amount.toString(),
-token_balance_from:token_balance_from.toString(),
-	token_balance_to: token_balance_to.toString(),
-	token_type_from:token_type_from.toString(),
-	token_type_to:token_type_to.toString()
-        }
-
-fs.writeFileSync('./input.json', JSON.stringify(inputs) , 'utf-8');
-
+```bash
+$ node tokens_transfers/generate_sample_tokens_transfer.js
 ```
 
-Careful, this circuit is quite big and took to setup on my MacbookPro more than 10m.
+A file `tokens_transfer_input.json` could be created which is then supplied while generating witness.
+
+NOTE : Careful, this circuit is quite big and took to setup on my MacbookPro more than 10m.
 The witness is generally a better way to check if your circuit compiles properly.
 
 And we need to add some token balance requirements as follows
